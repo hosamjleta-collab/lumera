@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+*.log
+data/*.db
+data/*.db-*
+.env
+.env.local
+public/uploads/products/*
+public/uploads/payment-proofs/*
+!public/uploads/products/.gitkeep
+!public/uploads/payment-proofs/.gitkeep

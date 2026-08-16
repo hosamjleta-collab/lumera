@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+:root {
+  --color-cream: #FAF8F6;
+  --color-charcoal: #222222;
+  --color-gold: #C9A86A;
+  --color-blush: #E8C8C8;
+  --background: var(--color-cream);
+  --foreground: var(--color-charcoal);
+}
+
+@theme inline {
+  --color-cream: var(--color-cream);
+  --color-charcoal: var(--color-charcoal);
+  --color-gold: var(--color-gold);
+  --color-blush: var(--color-blush);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-arabic: var(--font-cairo);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-cairo), Tahoma, Arial, sans-serif;
+}
+
+::selection {
+  background: var(--color-gold);
+  color: white;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-cream);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-gold);
+  border-radius: 4px;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.btn-gold {
+  background: var(--color-gold);
+  color: white;
+  transition: all 0.2s ease;
+}
+.btn-gold:hover {
+  background: #b8935a;
+  transform: translateY(-1px);
+}
+
+.card-shadow {
+  box-shadow: 0 2px 12px rgba(34, 34, 34, 0.06);
+}
+.card-shadow:hover {
+  box-shadow: 0 8px 24px rgba(34, 34, 34, 0.12);
+}
