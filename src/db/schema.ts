@@ -1,33 +1,35 @@
 import {
-  sqliteTable,
+  pgTable,
   text,
   integer,
-  real,
-} from "drizzle-orm/sqlite-core";
+  doublePrecision,
+  boolean,
+  timestamp,
+} from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 // ---------------------------------------------------------------------------
-// المستخدمون (عملاء / موردون / إدارة) - جدول موحد بحقل role
+// المستخدمون (عملاء / موردون / إدارة) - إمكانية التسجيل بالإيميل أو الهاتف
 // ---------------------------------------------------------------------------
-export const users = sqliteTable("users", {
+export const users = pgTable("users", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  phone: text("phone"),
+  email: text("email").unique(), // اختياري للتسجيل بالهاتف
+  phone: text("phone").unique(), // إضافة حقل رقم الهاتف
   passwordHash: text("password_hash").notNull(),
   role: text("role", { enum: ["customer", "supplier", "admin"] })
     .notNull()
     .default("customer"),
   status: text("status", { enum: ["active", "pending", "suspended"] })
     .notNull()
-    .default("active"), // للموردين: pending حتى توافق الإدارة
-  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+    .default("active"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
-// بيانات المورد الإضافية (تُنشأ عند تسجيل مورد جديد)
+// بيانات المورد الإضافية
 // ---------------------------------------------------------------------------
-export const supplierProfiles = sqliteTable("supplier_profiles", {
+export const supplierProfiles = pgTable("supplier_profiles", {
   id: text("id").primaryKey(),
   userId: text("user_id")
     .notNull()
@@ -35,15 +37,15 @@ export const supplierProfiles = sqliteTable("supplier_profiles", {
     .references(() => users.id, { onDelete: "cascade" }),
   storeName: text("store_name").notNull(),
   storeDescription: text("store_description"),
-  bankAccountInfo: text("bank_account_info"), // معلومات استلام المورد لأرباحه (نصية حاليًا)
-  approved: integer("approved", { mode: "boolean" }).notNull().default(false),
-  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  bankAccountInfo: text("bank_account_info"),
+  approved: boolean("approved").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
 // عناوين العملاء
 // ---------------------------------------------------------------------------
-export const addresses = sqliteTable("addresses", {
+export const addresses = pgTable("addresses", {
   id: text("id").primaryKey(),
   userId: text("user_id")
     .notNull()
@@ -54,38 +56,38 @@ export const addresses = sqliteTable("addresses", {
   city: text("city").notNull(),
   area: text("area"),
   addressLine: text("address_line").notNull(),
-  isDefault: integer("is_default", { mode: "boolean" }).notNull().default(false),
-  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  isDefault: boolean("is_default").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
 // التصنيفات
 // ---------------------------------------------------------------------------
-export const categories = sqliteTable("categories", {
+export const categories = pgTable("categories", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   description: text("description"),
   image: text("image"),
-  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
-// إعدادات العمولة (تتحكم بها الإدارة، ممكن تكون نسبة افتراضية عامة أو لكل تصنيف)
+// إعدادات العمولة
 // ---------------------------------------------------------------------------
-export const commissionSettings = sqliteTable("commission_settings", {
+export const commissionSettings = pgTable("commission_settings", {
   id: text("id").primaryKey(),
   categoryId: text("category_id").references(() => categories.id, {
     onDelete: "set null",
-  }), // null = عمولة افتراضية عامة
-  percentage: real("percentage").notNull(), // مثال: 20 تعني 20%
-  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+  }),
+  percentage: doublePrecision("percentage").notNull(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
 // المنتجات
 // ---------------------------------------------------------------------------
-export const products = sqliteTable("products", {
+export const products = pgTable("products", {
   id: text("id").primaryKey(),
   supplierId: text("supplier_id")
     .notNull()
@@ -97,28 +99,28 @@ export const products = sqliteTable("products", {
   slug: text("slug").notNull().unique(),
   brand: text("brand"),
   description: text("description"),
-  supplierPrice: real("supplier_price").notNull(), // سعر المورد
-  commissionPercentage: real("commission_percentage").notNull(), // العمولة وقت إضافة/تعديل المنتج
-  sellingPrice: real("selling_price").notNull(), // يُحسب تلقائيًا = supplierPrice * (1 + commission/100)
+  supplierPrice: doublePrecision("supplier_price").notNull(),
+  commissionPercentage: doublePrecision("commission_percentage").notNull(),
+  sellingPrice: doublePrecision("selling_price").notNull(),
   stock: integer("stock").notNull().default(0),
-  images: text("images").notNull().default("[]"), // JSON array of paths
+  images: text("images").notNull().default("[]"),
   status: text("status", {
     enum: ["pending", "approved", "rejected"],
   })
     .notNull()
     .default("pending"),
-  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-  isFeatured: integer("is_featured", { mode: "boolean" }).notNull().default(false),
-  rating: real("rating").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  isFeatured: boolean("is_featured").notNull().default(false),
+  rating: doublePrecision("rating").notNull().default(0),
   ratingCount: integer("rating_count").notNull().default(0),
-  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
 // عربة التسوق
 // ---------------------------------------------------------------------------
-export const cartItems = sqliteTable("cart_items", {
+export const cartItems = pgTable("cart_items", {
   id: text("id").primaryKey(),
   userId: text("user_id")
     .notNull()
@@ -127,15 +129,15 @@ export const cartItems = sqliteTable("cart_items", {
     .notNull()
     .references(() => products.id, { onDelete: "cascade" }),
   quantity: integer("quantity").notNull().default(1),
-  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
 // الطلبات
 // ---------------------------------------------------------------------------
-export const orders = sqliteTable("orders", {
+export const orders = pgTable("orders", {
   id: text("id").primaryKey(),
-  referenceNumber: text("reference_number").notNull().unique(), // رقم مرجعي يظهر للعميل
+  referenceNumber: text("reference_number").notNull().unique(),
   userId: text("user_id")
     .notNull()
     .references(() => users.id),
@@ -155,18 +157,18 @@ export const orders = sqliteTable("orders", {
   })
     .notNull()
     .default("new"),
-  subtotal: real("subtotal").notNull(),
-  total: real("total").notNull(),
+  subtotal: doublePrecision("subtotal").notNull(),
+  total: doublePrecision("total").notNull(),
   customerNote: text("customer_note"),
   adminNote: text("admin_note"),
-  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
-// تفاصيل الطلب - نحفظ سعر المورد والعمولة وسعر البيع وقت الطلب (لا تتأثر بتغييرات لاحقة)
+// تفاصيل الطلب
 // ---------------------------------------------------------------------------
-export const orderItems = sqliteTable("order_items", {
+export const orderItems = pgTable("order_items", {
   id: text("id").primaryKey(),
   orderId: text("order_id")
     .notNull()
@@ -177,25 +179,25 @@ export const orderItems = sqliteTable("order_items", {
   supplierId: text("supplier_id")
     .notNull()
     .references(() => users.id),
-  productName: text("product_name").notNull(), // نسخة ثابتة من الاسم وقت الشراء
+  productName: text("product_name").notNull(),
   productImage: text("product_image"),
   quantity: integer("quantity").notNull(),
-  supplierPrice: real("supplier_price").notNull(), // سعر المورد وقت الطلب
-  commissionPercentage: real("commission_percentage").notNull(), // العمولة وقت الطلب
-  sellingPrice: real("selling_price").notNull(), // سعر البيع للعميل وقت الطلب
-  lineTotal: real("line_total").notNull(), // sellingPrice * quantity
+  supplierPrice: doublePrecision("supplier_price").notNull(),
+  commissionPercentage: doublePrecision("commission_percentage").notNull(),
+  sellingPrice: doublePrecision("selling_price").notNull(),
+  lineTotal: doublePrecision("line_total").notNull(),
 });
 
 // ---------------------------------------------------------------------------
-// المدفوعات (سجل الدفعة المرتبطة بالطلب)
+// المدفوعات
 // ---------------------------------------------------------------------------
-export const payments = sqliteTable("payments", {
+export const payments = pgTable("payments", {
   id: text("id").primaryKey(),
   orderId: text("order_id")
     .notNull()
     .unique()
     .references(() => orders.id, { onDelete: "cascade" }),
-  amount: real("amount").notNull(),
+  amount: doublePrecision("amount").notNull(),
   method: text("method").notNull().default("bank_transfer"),
   status: text("status", {
     enum: ["pending", "under_review", "approved", "rejected"],
@@ -203,43 +205,43 @@ export const payments = sqliteTable("payments", {
     .notNull()
     .default("pending"),
   reviewedBy: text("reviewed_by").references(() => users.id),
-  reviewedAt: text("reviewed_at"),
+  reviewedAt: timestamp("reviewed_at"),
   rejectionReason: text("rejection_reason"),
-  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
-// إثباتات الدفع (يمكن رفع أكثر من إثبات لنفس الطلب لو رُفض الأول)
+// إثباتات الدفع
 // ---------------------------------------------------------------------------
-export const paymentProofs = sqliteTable("payment_proofs", {
+export const paymentProofs = pgTable("payment_proofs", {
   id: text("id").primaryKey(),
   orderId: text("order_id")
     .notNull()
     .references(() => orders.id, { onDelete: "cascade" }),
   imagePath: text("image_path").notNull(),
   note: text("note"),
-  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
 // الإشعارات
 // ---------------------------------------------------------------------------
-export const notifications = sqliteTable("notifications", {
+export const notifications = pgTable("notifications", {
   id: text("id").primaryKey(),
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   message: text("message").notNull(),
-  isRead: integer("is_read", { mode: "boolean" }).notNull().default(false),
+  isRead: boolean("is_read").notNull().default(false),
   link: text("link"),
-  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
-// إعدادات الموقع العامة (بيانات الحساب البنكي المعروضة للعملاء وغيرها)
+// إعدادات الموقع العامة
 // ---------------------------------------------------------------------------
-export const siteSettings = sqliteTable("site_settings", {
+export const siteSettings = pgTable("site_settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
 });

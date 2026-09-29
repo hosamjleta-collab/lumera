@@ -8,6 +8,13 @@
       "when": 1786709142180,
       "tag": "0000_condemned_stranger",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1790707371349,
+      "tag": "0001_productive_mindworm",
+      "breakpoints": true
     }
   ]
 }
