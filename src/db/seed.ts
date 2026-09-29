@@ -103,7 +103,7 @@ async function seed() {
     { key: "account_number", value: "141206000004280" },
     { key: "iban", value: "LY05002141141206000004280" },
     { key: "contact_phone", value: "+218-94-536-7328" },
-    { key: "contact_email", value: "support@lumera.test" },
+    { key: "contact_email", value: "HOSAM@lumera.test" },
   ]);
 
   // ---- المنتجات ----
