@@ -23,7 +23,7 @@ export const users = pgTable("users", {
   status: text("status", { enum: ["active", "pending", "suspended"] })
     .notNull()
     .default("active"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
 // ---------------------------------------------------------------------------
@@ -39,7 +39,7 @@ export const supplierProfiles = pgTable("supplier_profiles", {
   storeDescription: text("store_description"),
   bankAccountInfo: text("bank_account_info"),
   approved: boolean("approved").notNull().default(false),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
 // ---------------------------------------------------------------------------
@@ -57,7 +57,7 @@ export const addresses = pgTable("addresses", {
   area: text("area"),
   addressLine: text("address_line").notNull(),
   isDefault: boolean("is_default").notNull().default(false),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
 // ---------------------------------------------------------------------------
@@ -69,7 +69,7 @@ export const categories = pgTable("categories", {
   slug: text("slug").notNull().unique(),
   description: text("description"),
   image: text("image"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
 // ---------------------------------------------------------------------------
@@ -81,7 +81,7 @@ export const commissionSettings = pgTable("commission_settings", {
     onDelete: "set null",
   }),
   percentage: doublePrecision("percentage").notNull(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
 // ---------------------------------------------------------------------------
@@ -113,8 +113,8 @@ export const products = pgTable("products", {
   isFeatured: boolean("is_featured").notNull().default(false),
   rating: doublePrecision("rating").notNull().default(0),
   ratingCount: integer("rating_count").notNull().default(0),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
 // ---------------------------------------------------------------------------
@@ -129,7 +129,7 @@ export const cartItems = pgTable("cart_items", {
     .notNull()
     .references(() => products.id, { onDelete: "cascade" }),
   quantity: integer("quantity").notNull().default(1),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
 // ---------------------------------------------------------------------------
@@ -161,8 +161,8 @@ export const orders = pgTable("orders", {
   total: doublePrecision("total").notNull(),
   customerNote: text("customer_note"),
   adminNote: text("admin_note"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
 // ---------------------------------------------------------------------------
@@ -207,7 +207,7 @@ export const payments = pgTable("payments", {
   reviewedBy: text("reviewed_by").references(() => users.id),
   reviewedAt: timestamp("reviewed_at"),
   rejectionReason: text("rejection_reason"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
 // ---------------------------------------------------------------------------
@@ -220,7 +220,7 @@ export const paymentProofs = pgTable("payment_proofs", {
     .references(() => orders.id, { onDelete: "cascade" }),
   imagePath: text("image_path").notNull(),
   note: text("note"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
 // ---------------------------------------------------------------------------
@@ -235,7 +235,7 @@ export const notifications = pgTable("notifications", {
   message: text("message").notNull(),
   isRead: boolean("is_read").notNull().default(false),
   link: text("link"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
 // ---------------------------------------------------------------------------
