@@ -1,51 +1,47 @@
-// إنشاء حساب مدير (Admin) حقيقي وآمن.
-// شغّليه بالأمر: npm run db:create-admin
-// سيسألك عن الاسم والبريد الإلكتروني وكلمة مرور قوية، وينشئ الحساب مباشرة
-// في قاعدة البيانات الحالية (المحلية أو الحقيقية حسب DATABASE_PATH).
-
-import readline from "readline/promises";
 import { db } from "./index";
 import { users } from "./schema";
 import { hashPassword } from "../lib/auth";
 import { generateId } from "../lib/utils";
 import { getUserByEmail } from "../lib/data";
+import { eq } from "drizzle-orm";
 
 async function main() {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const name = "Hosam Jleta";
+  const email = "hosam.jleta@gmail.com";
+  // ضع كلمة المرور التي تريدها للحساب في حال إنشاء حساب جديد
+  const defaultPassword = "AdminPassword123!"; 
 
-  console.log("=== إنشاء حساب مدير جديد ===\n");
+  console.log("=== جاري التحقق من حساب المدير ===");
 
-  const name = await rl.question("الاسم الكامل: ");
-  const email = await rl.question("البريد الإلكتروني: ");
-  let password = "";
-  while (password.length < 8) {
-    password = await rl.question("كلمة المرور (8 أحرف على الأقل): ");
-    if (password.length < 8) console.log("كلمة المرور قصيرة جدًا، حاولي مرة أخرى.\n");
+  try {
+    const existing = await getUserByEmail(email);
+
+    if (existing) {
+      // إذا كان الحساب موجوداً، نكتفي بترقيته إلى admin
+      await db
+        .update(users)
+        .set({ role: "admin", status: "active" })
+        .where(eq(users.email, email));
+      console.log(`✔ تم ترقية الحساب الحالي (${email}) إلى admin بنجاح!`);
+    } else {
+      // إذا لم يكن الحساب موجوداً، نقوم بإنشائه مباشرة
+      const passwordHash = await hashPassword(defaultPassword);
+      const id = generateId("usr");
+
+      await db.insert(users).values({
+        id,
+        name,
+        email,
+        passwordHash,
+        role: "admin",
+        status: "active",
+      });
+      console.log(`✔ تم إنشاء حساب مدير جديد بنجاح: ${email}`);
+    }
+  } catch (err) {
+    console.error("خطأ أثناء إعداد حساب الأدمن:", err);
   }
 
-  rl.close();
-
-  const existing = await getUserByEmail(email);
-  if (existing) {
-    console.log(`\nيوجد حساب بالفعل بهذا البريد (${email}). لم يتم إنشاء حساب جديد.`);
-    console.log("إذا أردتِ ترقيته إلى مدير، عدّلي حقل role يدويًا أو أخبري Claude لمساعدتك.");
-    process.exit(1);
-  }
-
-  const passwordHash = await hashPassword(password);
-  const id = generateId("usr");
-
-  await db.insert(users).values({
-    id,
-    name,
-    email,
-    passwordHash,
-    role: "admin",
-    status: "active",
-  });
-
-  console.log(`\n✔ تم إنشاء حساب المدير بنجاح: ${email}`);
-  console.log("يمكنك الآن تسجيل الدخول بهذا الحساب من صفحة /login");
   process.exit(0);
 }
 
