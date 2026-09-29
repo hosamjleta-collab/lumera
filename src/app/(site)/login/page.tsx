@@ -82,17 +82,5 @@ export default function LoginPage() {
         </Link>
       </p>
 
-      <div className="mt-8 bg-blush/20 rounded-xl p-4 text-xs text-charcoal/60 leading-relaxed">
-        <strong>حسابات تجريبية:</strong>
-        <br />
-        مدير: admin@lumera.test
-        <br />
-        مورد: supplier1@lumera.test
-        <br />
-        عميل: customer@lumera.test
-        <br />
-        كلمة المرور للجميع: Password123!
-      </div>
-    </div>
   );
 }
