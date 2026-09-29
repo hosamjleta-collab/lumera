@@ -1,12 +1,10 @@
-import type { Config } from "drizzle-kit";
+import { defineConfig } from "drizzle-kit";
 
-const dbPath = process.env.DATABASE_PATH || "./data/lumera.db";
-
-export default {
+export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "./drizzle",
-  dialect: "sqlite",
+  dialect: "postgresql",
   dbCredentials: {
-    url: dbPath,
+    url: process.env.DATABASE_URL!,
   },
-} satisfies Config;
+});
