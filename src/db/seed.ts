@@ -99,10 +99,10 @@ async function seed() {
   // ---- إعدادات الموقع (بيانات التحويل البنكي) ----
   await db.insert(siteSettings).values([
     { key: "bank_name", value: "مصرف الجمهورية" },
-    { key: "account_holder", value: "شركة لوميرا للتجارة الإلكترونية" },
-    { key: "account_number", value: "1234567890123456" },
-    { key: "iban", value: "LY00000000000000000000000" },
-    { key: "contact_phone", value: "+218-91-000-0000" },
+    { key: "account_holder", value: "حسام ابراهيم نصر جليطة" },
+    { key: "account_number", value: "141206000004280" },
+    { key: "iban", value: "LY05002141141206000004280" },
+    { key: "contact_phone", value: "+218-94-536-7328" },
     { key: "contact_email", value: "support@lumera.test" },
   ]);
 
