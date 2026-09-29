@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "node scripts/prepare-volume.js && npm run db:migrate && next start",
+    "start": "tsx src/db/create-admin.ts && node scripts/prepare-volume.js && npm run db:migrate && next start",
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
