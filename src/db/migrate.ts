@@ -2,10 +2,13 @@ import fs from "fs";
 import path from "path";
 import { createClient } from "@libsql/client";
 
-// إعداد الاتصال باستخدام LibSQL العميل السحابي الخفيف
-const dbUrl = process.env.DATABASE_URL || `file:${path.join(process.cwd(), "sqlite.db")}`;
-const db = createClient({ url: dbUrl });
+// تنظيف رابط الاتصال أو استخدام قاعدة بيانات محلية إذا كان الرابط يحتوي على إعدادات غير مدعومة
+let dbUrl = process.env.DATABASE_URL;
+if (!dbUrl || dbUrl.includes("sslmode") || dbUrl.startsWith("postgres")) {
+  dbUrl = `file:${path.join(process.cwd(), "sqlite.db")}`;
+}
 
+const db = createClient({ url: dbUrl });
 const MIGRATIONS_DIR = path.join(process.cwd(), "drizzle");
 
 async function main() {
