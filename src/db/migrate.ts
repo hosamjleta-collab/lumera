@@ -1,24 +1,17 @@
 import fs from "fs";
 import path from "path";
-import Database from "better-sqlite3";
+import { createClient } from "@libsql/client";
 
-// تحديد مسار قاعدة البيانات
-const dbPath = process.env.DATABASE_URL?.replace("sqlite://", "") || path.join(process.cwd(), "sqlite.db");
+// إعداد الاتصال باستخدام LibSQL العميل السحابي الخفيف
+const dbUrl = process.env.DATABASE_URL || `file:${path.join(process.cwd(), "sqlite.db")}`;
+const db = createClient({ url: dbUrl });
 
-// التأكد من أن المجلد الذي يحتوي على قاعدة البيانات موجود فعلياً
-const dbDir = path.dirname(dbPath);
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
-  console.log(`[migrate] تم إنشاء مجلد قاعدة البيانات: ${dbDir}`);
-}
-
-const sqlite = new Database(dbPath);
 const MIGRATIONS_DIR = path.join(process.cwd(), "drizzle");
 
 async function main() {
-  console.log(`[migrate] الاتصال بقاعدة البيانات في المسار: ${dbPath}`);
+  console.log(`[migrate] الاتصال بقاعدة البيانات عبر LibSQL في المسار: ${dbUrl}`);
   
-  sqlite.exec(`
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS __custom_migrations (
       name TEXT PRIMARY KEY,
       applied_at TEXT DEFAULT (current_timestamp)
@@ -36,10 +29,12 @@ async function main() {
     .sort();
 
   for (const file of files) {
-    const stmt = sqlite.prepare(`SELECT name FROM __custom_migrations WHERE name = ?`);
-    const already = stmt.get(file);
-    
-    if (already) {
+    const result = await db.execute({
+      sql: `SELECT name FROM __custom_migrations WHERE name = ?`,
+      args: [file],
+    });
+
+    if (result.rows.length > 0) {
       console.log(`[migrate] تم تطبيق ${file} مسبقًا، تخطي.`);
       continue;
     }
@@ -52,10 +47,13 @@ async function main() {
 
     console.log(`[migrate] تطبيق ${file} (${statements.length} استعلام)...`);
     for (const statement of statements) {
-      sqlite.exec(statement);
+      await db.execute(statement);
     }
 
-    sqlite.prepare(`INSERT INTO __custom_migrations (name) VALUES (?)`).run(file);
+    await db.execute({
+      sql: `INSERT INTO __custom_migrations (name) VALUES (?);`,
+      args: [file],
+    });
   }
 
   console.log("[migrate] اكتمل تطبيق كل الترحيلات ✔");
