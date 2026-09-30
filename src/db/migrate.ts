@@ -2,10 +2,17 @@ import fs from "fs";
 import path from "path";
 import Database from "better-sqlite3";
 
-// تحديد مسار قاعدة البيانات مباشرة لضمان عدم حدوث خطأ في الاتصال
+// تحديد مسار قاعدة البيانات
 const dbPath = process.env.DATABASE_URL?.replace("sqlite://", "") || path.join(process.cwd(), "sqlite.db");
-const sqlite = new Database(dbPath);
 
+// التأكد من أن المجلد الذي يحتوي على قاعدة البيانات موجود فعلياً
+const dbDir = path.dirname(dbPath);
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+  console.log(`[migrate] تم إنشاء مجلد قاعدة البيانات: ${dbDir}`);
+}
+
+const sqlite = new Database(dbPath);
 const MIGRATIONS_DIR = path.join(process.cwd(), "drizzle");
 
 async function main() {
