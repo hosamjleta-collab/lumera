@@ -1,16 +1,16 @@
-// مُشغّل ترحيلات (migrations) مخصص وبسيط، يستخدم node:sqlite المدمجة بدلاً
-// من الاعتماد على درايفر better-sqlite3 الداخلي في drizzle-kit، والذي قد
-// يسبب تعارضًا وانهيارًا (Segmentation fault) على بعض بيئات الاستضافة
-// السحابية. يقرأ هذا السكربت ملفات SQL من مجلد drizzle/ ويطبّقها مرة واحدة
-// فقط لكل ملف (تتبّع الملفات المُطبّقة مسبقًا في جدول __custom_migrations).
-
 import fs from "fs";
 import path from "path";
-import { sqlite } from "./index";
+import Database from "better-sqlite3";
+
+// تحديد مسار قاعدة البيانات مباشرة لضمان عدم حدوث خطأ في الاتصال
+const dbPath = process.env.DATABASE_URL?.replace("sqlite://", "") || path.join(process.cwd(), "sqlite.db");
+const sqlite = new Database(dbPath);
 
 const MIGRATIONS_DIR = path.join(process.cwd(), "drizzle");
 
 async function main() {
+  console.log(`[migrate] الاتصال بقاعدة البيانات في المسار: ${dbPath}`);
+  
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS __custom_migrations (
       name TEXT PRIMARY KEY,
@@ -18,17 +18,21 @@ async function main() {
     );
   `);
 
+  if (!fs.existsSync(MIGRATIONS_DIR)) {
+    console.log("[migrate] مجلد الترحيلات غير موجود، تخطي.");
+    return;
+  }
+
   const files = fs
     .readdirSync(MIGRATIONS_DIR)
     .filter((f) => f.endsWith(".sql"))
     .sort();
 
   for (const file of files) {
-    const already = sqlite.query<{ name: string }>(
-      `SELECT name FROM __custom_migrations WHERE name = ?`,
-      [file]
-    );
-    if (already.length > 0) {
+    const stmt = sqlite.prepare(`SELECT name FROM __custom_migrations WHERE name = ?`);
+    const already = stmt.get(file);
+    
+    if (already) {
       console.log(`[migrate] تم تطبيق ${file} مسبقًا، تخطي.`);
       continue;
     }
@@ -44,9 +48,7 @@ async function main() {
       sqlite.exec(statement);
     }
 
-    sqlite.exec(
-      `INSERT INTO __custom_migrations (name) VALUES ('${file.replace(/'/g, "''")}');`
-    );
+    sqlite.prepare(`INSERT INTO __custom_migrations (name) VALUES (?)`).run(file);
   }
 
   console.log("[migrate] اكتمل تطبيق كل الترحيلات ✔");
