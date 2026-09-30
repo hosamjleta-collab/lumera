@@ -15,12 +15,13 @@
     "db:seed": "tsx src/db/seed.ts",
     "db:create-admin": "tsx src/db/create-admin.ts",
     "db:reset-demo": "tsx src/db/reset-demo.ts",
-    "setup": "npm install && npm run db:generate && npm run db:migrate && npm run db:seed"
+    "setup": "npm run db:migrate && npm run db:seed"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
     "@radix-ui/react-toast": "^1.2.23",
     "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^13.0.3",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
     "jsonwebtoken": "^9.0.3",
