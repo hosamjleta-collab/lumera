@@ -6,6 +6,13 @@ import { Pool } from "@neondatabase/serverless";
 const MIGRATIONS_DIR = path.join(process.cwd(), "drizzle");
 let migrationPromise: Promise<void> | null = null;
 
+function sanitizeSqlForPostgres(statement: string) {
+  return statement
+    .replace(/`([^`]+)`/g, '"$1"')
+    .replace(/\s*;\s*$/g, ";")
+    .trim();
+}
+
 export function runMigrations() {
   if (!migrationPromise) {
     migrationPromise = (async () => {
@@ -57,10 +64,7 @@ export function runMigrations() {
 
             console.log(`[migrate] تطبيق ${file} (${statements.length} استعلام)...`);
             for (const statement of statements) {
-              const normalizedStatement = statement.replace(
-                /DROP TABLE\s+`([^`]+)`/gi,
-                "DROP TABLE IF EXISTS \"$1\""
-              );
+              const normalizedStatement = sanitizeSqlForPostgres(statement);
               await client.query(normalizedStatement);
             }
 
