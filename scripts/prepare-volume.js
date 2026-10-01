@@ -10,11 +10,20 @@
 const fs = require("fs");
 const path = require("path");
 
-const dataDir = process.env.DATA_DIR;
+const configuredDataDir = process.env.DATA_DIR;
 
-if (!dataDir) {
+if (!configuredDataDir) {
   console.log("[prepare-volume] DATA_DIR غير مضبوط - تشغيل محلي عادي، لا حاجة لإعداد إضافي.");
   process.exit(0);
+}
+
+let dataDir = configuredDataDir;
+try {
+  fs.mkdirSync(dataDir, { recursive: true });
+} catch {
+  dataDir = path.join(process.cwd(), "data");
+  fs.mkdirSync(dataDir, { recursive: true });
+  console.log(`[prepare-volume] DATA_DIR غير قابل للكتابة، تم التبديل إلى: ${dataDir}`);
 }
 
 const dbDir = path.join(dataDir, "db");

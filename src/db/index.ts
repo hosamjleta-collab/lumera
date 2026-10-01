@@ -6,8 +6,17 @@ import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "./schema";
 
 const preferredDataDir = process.env.DATA_DIR || path.join(process.cwd(), "data");
-const fallbackDbPath = path.join(preferredDataDir, "lumera.db");
-fs.mkdirSync(path.dirname(fallbackDbPath), { recursive: true });
+const fallbackDataDir = (() => {
+  try {
+    fs.mkdirSync(preferredDataDir, { recursive: true });
+    return preferredDataDir;
+  } catch {
+    const localFallback = path.join(process.cwd(), "data");
+    fs.mkdirSync(localFallback, { recursive: true });
+    return localFallback;
+  }
+})();
+const fallbackDbPath = path.join(fallbackDataDir, "lumera.db");
 
 const rawDatabaseUrl = (process.env.DATABASE_URL || "").trim();
 const isLegacyPostgresUrl = Boolean(
