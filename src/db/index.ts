@@ -1,34 +1,19 @@
-import fs from "fs";
-import path from "path";
 import "dotenv/config";
-import { createClient } from "@libsql/client";
-import { drizzle } from "drizzle-orm/libsql";
+import { Pool } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-serverless";
 import * as schema from "./schema";
+import { runMigrations } from "./migrate";
 
-const preferredDataDir = process.env.DATA_DIR || path.join(process.cwd(), "data");
-const fallbackDataDir = (() => {
-  try {
-    fs.mkdirSync(preferredDataDir, { recursive: true });
-    return preferredDataDir;
-  } catch {
-    const localFallback = path.join(process.cwd(), "data");
-    fs.mkdirSync(localFallback, { recursive: true });
-    return localFallback;
-  }
-})();
-const fallbackDbPath = path.join(fallbackDataDir, "lumera.db");
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL is required for Neon/Postgres runtime.");
+}
 
-const rawDatabaseUrl = (process.env.DATABASE_URL || "").trim();
-const isLegacyPostgresUrl = Boolean(
-  rawDatabaseUrl && (rawDatabaseUrl.startsWith("postgres") || rawDatabaseUrl.includes("sslmode="))
-);
-const normalizedDatabaseUrl = isLegacyPostgresUrl
-  ? `file:${fallbackDbPath.replace(/\\/g, "/")}`
-  : rawDatabaseUrl.startsWith("file:")
-    ? rawDatabaseUrl
-    : rawDatabaseUrl
-      ? `file:${path.resolve(rawDatabaseUrl).replace(/\\/g, "/")}`
-      : `file:${fallbackDbPath.replace(/\\/g, "/")}`;
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const db = drizzle(pool, { schema });
+export const sql = pool;
 
-export const sqlite = createClient({ url: normalizedDatabaseUrl });
-export const db = drizzle(sqlite, { schema });
+if (process.env.DATABASE_URL) {
+  void runMigrations().catch((error) => {
+    console.error("[db] فشل تشغيل الترحيلات عند بداية التطبيق:", error);
+  });
+}

@@ -1,16 +1,17 @@
-import { db, sqlite } from "./index";
+import { db } from "./index";
 import { users, supplierProfiles, categories, products, commissionSettings, siteSettings } from "./schema";
 import { generateId, calculateSellingPrice } from "../lib/utils";
 import bcrypt from "bcryptjs";
+import { sql } from "drizzle-orm";
 
-async function executeSqlStatements(client: typeof sqlite, sqlText: string) {
+async function executeSqlStatements(sqlText: string) {
   const statements = sqlText
     .split(";")
     .map((statement) => statement.trim())
     .filter(Boolean);
 
   for (const statement of statements) {
-    await client.execute(statement);
+    await db.execute(sql.raw(statement));
   }
 }
 
@@ -18,7 +19,7 @@ async function seed() {
   console.log("بدء زراعة البيانات التجريبية...");
 
   // تنظيف الجداول (لإعادة التشغيل بأمان)
-  await executeSqlStatements(sqlite, `
+  await executeSqlStatements(`
     DELETE FROM order_items; DELETE FROM orders; DELETE FROM payment_proofs; DELETE FROM payments;
     DELETE FROM cart_items; DELETE FROM notifications; DELETE FROM products; DELETE FROM addresses;
     DELETE FROM commission_settings; DELETE FROM categories; DELETE FROM supplier_profiles;

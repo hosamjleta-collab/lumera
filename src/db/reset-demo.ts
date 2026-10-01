@@ -6,16 +6,17 @@
 // تشغيل: npm run db:reset-demo
 
 import readline from "readline/promises";
-import { sqlite } from "./index";
+import { db } from "./index";
+import { sql } from "drizzle-orm";
 
-async function executeSqlStatements(client: typeof sqlite, sqlText: string) {
+async function executeSqlStatements(sqlText: string) {
   const statements = sqlText
     .split(";")
     .map((statement) => statement.trim())
     .filter(Boolean);
 
   for (const statement of statements) {
-    await client.execute(statement);
+    await db.execute(sql.raw(statement));
   }
 }
 
@@ -30,7 +31,7 @@ async function main() {
     process.exit(0);
   }
 
-  await executeSqlStatements(sqlite, `
+  await executeSqlStatements(`
     DELETE FROM order_items;
     DELETE FROM orders;
     DELETE FROM payment_proofs;
