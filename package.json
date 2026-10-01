@@ -7,10 +7,8 @@
   },
   "scripts": {
     "dev": "next dev",
-    "predev": "npm run db:migrate:if",
     "build": "next build",
-    "prebuild": "npm run db:migrate:if",
-    "start": "tsx src/db/create-admin.ts && node scripts/prepare-volume.js && npm run db:migrate:if && next start",
+    "start": "tsx src/db/create-admin.ts && node scripts/prepare-volume.js && next start",
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
