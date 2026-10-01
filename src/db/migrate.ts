@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import "dotenv/config";
 import { createClient } from "@libsql/client";
 
 // تنظيف رابط الاتصال أو استخدام قاعدة بيانات محلية إذا كان الرابط يحتوي على إعدادات غير مدعومة
@@ -28,7 +29,7 @@ async function main() {
 
   const files = fs
     .readdirSync(MIGRATIONS_DIR)
-    .filter((f) => f.endsWith(".sql"))
+    .filter((f) => f.endsWith(".sql") && !f.endsWith(".sql.disabled"))
     .sort();
 
   for (const file of files) {
@@ -50,7 +51,11 @@ async function main() {
 
     console.log(`[migrate] تطبيق ${file} (${statements.length} استعلام)...`);
     for (const statement of statements) {
-      await db.execute(statement);
+      const normalizedStatement = statement.replace(
+        /DROP TABLE\s+`([^`]+)`/gi,
+        "DROP TABLE IF EXISTS `$1`"
+      );
+      await db.execute(normalizedStatement);
     }
 
     await db.execute({

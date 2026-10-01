@@ -8,6 +8,17 @@
 import readline from "readline/promises";
 import { sqlite } from "./index";
 
+async function executeSqlStatements(client: typeof sqlite, sqlText: string) {
+  const statements = sqlText
+    .split(";")
+    .map((statement) => statement.trim())
+    .filter(Boolean);
+
+  for (const statement of statements) {
+    await client.execute(statement);
+  }
+}
+
 async function main() {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   console.log("⚠️  هذا سيحذف كل الحسابات والمنتجات والطلبات التجريبية نهائيًا.");
@@ -19,7 +30,7 @@ async function main() {
     process.exit(0);
   }
 
-  sqlite.exec(`
+  await executeSqlStatements(sqlite, `
     DELETE FROM order_items;
     DELETE FROM orders;
     DELETE FROM payment_proofs;

@@ -30,6 +30,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "البريد الإلكتروني أو كلمة المرور غير صحيحة" }, { status: 401 });
     }
 
+    if (!user.email) {
+      return NextResponse.json({ error: "هذا الحساب لا يملك بريدًا إلكترونيًا مسجلاً." }, { status: 400 });
+    }
+
     if (user.status === "suspended") {
       return NextResponse.json({ error: "تم إيقاف هذا الحساب. تواصلي مع الدعم." }, { status: 403 });
     }

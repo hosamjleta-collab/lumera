@@ -3,11 +3,22 @@ import { users, supplierProfiles, categories, products, commissionSettings, site
 import { generateId, calculateSellingPrice } from "../lib/utils";
 import bcrypt from "bcryptjs";
 
+async function executeSqlStatements(client: typeof sqlite, sqlText: string) {
+  const statements = sqlText
+    .split(";")
+    .map((statement) => statement.trim())
+    .filter(Boolean);
+
+  for (const statement of statements) {
+    await client.execute(statement);
+  }
+}
+
 async function seed() {
   console.log("بدء زراعة البيانات التجريبية...");
 
   // تنظيف الجداول (لإعادة التشغيل بأمان)
-  sqlite.exec(`
+  await executeSqlStatements(sqlite, `
     DELETE FROM order_items; DELETE FROM orders; DELETE FROM payment_proofs; DELETE FROM payments;
     DELETE FROM cart_items; DELETE FROM notifications; DELETE FROM products; DELETE FROM addresses;
     DELETE FROM commission_settings; DELETE FROM categories; DELETE FROM supplier_profiles;
