@@ -1,21 +1,24 @@
-import "dotenv/config";
+﻿import { config } from "dotenv";
+config({ path: ".env.local" });
 import { Pool } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-serverless";
 import * as schema from "./schema";
 import { runMigrations } from "./migrate";
 
-if (!process.env.DATABASE_URL) {
+const connectionString = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
+
+if (!connectionString) {
   throw new Error("DATABASE_URL is required for Neon/Postgres runtime.");
 }
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new Pool({ connectionString });
 export const db = drizzle(pool, { schema });
 export const sql = pool;
 
-if (process.env.DATABASE_URL && process.env.RUN_DB_MIGRATIONS === "true") {
+if (connectionString && process.env.RUN_DB_MIGRATIONS === "true") {
   void runMigrations().catch((error) => {
-    console.error("[db] تم تعطيل التشغيل التلقائي للترحيلات. استخدم RUN_DB_MIGRATIONS=true أو npm run db:migrate يدويًا.", error);
+    console.error("[db] automatic migrations disabled. Use RUN_DB_MIGRATIONS=true or npm run db:migrate.", error);
   });
-} else if (process.env.DATABASE_URL) {
-  console.log("[db] تم تعطيل الترحيلات التلقائية أثناء التشغيل/البناء.");
+} else if (connectionString) {
+  console.log("[db] automatic migrations disabled during build/startup.");
 }

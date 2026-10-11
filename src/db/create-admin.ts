@@ -1,31 +1,32 @@
+﻿import { config } from "dotenv";
+config({ path: ".env.local" });
+import bcrypt from "bcryptjs";
+import { eq } from "drizzle-orm";
 import { db } from "./index";
 import { users } from "./schema";
-import { hashPassword } from "../lib/auth";
-import { generateId } from "../lib/utils";
-import { getUserByEmail } from "../lib/data";
-import { eq } from "drizzle-orm";
+
+function generateId(prefix: string) {
+  return `${prefix}_${Math.random().toString(36).substring(2, 15)}${Date.now().toString(36)}`;
+}
 
 async function main() {
   const name = "Hosam Jleta";
   const email = "hosam.jleta@gmail.com";
-  // ضع كلمة المرور التي تريدها للحساب في حال إنشاء حساب جديد
-  const defaultPassword = "AdminPassword123!"; 
+  const defaultPassword = "AdminPassword123!";
 
-  console.log("=== جاري التحقق من حساب المدير ===");
+  console.log("=== Checking admin account ===");
 
   try {
-    const existing = await getUserByEmail(email);
+    const existing = await db.select().from(users).where(eq(users.email, email)).limit(1);
 
-    if (existing) {
-      // إذا كان الحساب موجوداً، نكتفي بترقيته إلى admin
+    if (existing.length > 0) {
       await db
         .update(users)
         .set({ role: "admin", status: "active" })
         .where(eq(users.email, email));
-      console.log(`✔ تم ترقية الحساب الحالي (${email}) إلى admin بنجاح!`);
+      console.log(`Updated existing account (${email}) to admin.`);
     } else {
-      // إذا لم يكن الحساب موجوداً، نقوم بإنشائه مباشرة
-      const passwordHash = await hashPassword(defaultPassword);
+      const passwordHash = await bcrypt.hash(defaultPassword, 10);
       const id = generateId("usr");
 
       await db.insert(users).values({
@@ -36,10 +37,11 @@ async function main() {
         role: "admin",
         status: "active",
       });
-      console.log(`✔ تم إنشاء حساب مدير جديد بنجاح: ${email}`);
+      console.log(`Created new admin account: ${email}`);
+      console.log(`User ID: ${id}`);
     }
   } catch (err) {
-    console.error("خطأ أثناء إعداد حساب الأدمن:", err);
+    console.error("Error setting up admin account:", err);
   }
 
   process.exit(0);

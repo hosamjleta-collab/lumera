@@ -50,3 +50,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# Cloudflare / OpenNext (لم نعد نستخدمها)
+.dev.vars
+.open-next/
+.wrangler/
+cloudflare-env.d.ts
+open-next.config.ts
+wrangler.jsonc
+
+# ملفات التنظيف المؤقتة
+clean-db.js
+src/db/clean-db.js

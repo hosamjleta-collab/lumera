@@ -1,6 +1,7 @@
-import fs from "fs";
+﻿import fs from "fs";
 import path from "path";
-import "dotenv/config";
+import { config } from "dotenv";
+config({ path: ".env.local" });
 import { Pool } from "@neondatabase/serverless";
 
 const MIGRATIONS_DIR = path.join(process.cwd(), "drizzle");
@@ -16,14 +17,15 @@ function sanitizeSqlForPostgres(statement: string) {
 export function runMigrations() {
   if (!migrationPromise) {
     migrationPromise = (async () => {
-      if (!process.env.DATABASE_URL) {
+      const connectionString = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
+      if (!connectionString) {
         throw new Error("DATABASE_URL is required for migrations.");
       }
 
-      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      const pool = new Pool({ connectionString });
 
       try {
-        console.log("[migrate] الاتصال بقاعدة البيانات عبر Neon/Postgres.");
+        console.log("[migrate] connecting to Neon/Postgres...");
 
         const client = await pool.connect();
 
@@ -36,7 +38,7 @@ export function runMigrations() {
           `);
 
           if (!fs.existsSync(MIGRATIONS_DIR)) {
-            console.log("[migrate] مجلد الترحيلات غير موجود، تخطي.");
+            console.log("[migrate] migrations directory not found, skipping.");
             return;
           }
 
@@ -52,7 +54,7 @@ export function runMigrations() {
             );
 
             if (result.rows.length > 0) {
-              console.log(`[migrate] تم تطبيق ${file} مسبقًا، تخطي.`);
+              console.log(`[migrate] already applied: ${file}, skipping.`);
               continue;
             }
 
@@ -62,7 +64,7 @@ export function runMigrations() {
               .map((s) => s.trim())
               .filter(Boolean);
 
-            console.log(`[migrate] تطبيق ${file} (${statements.length} استعلام)...`);
+            console.log(`[migrate] applying ${file} (${statements.length} statements)...`);
             for (const statement of statements) {
               const normalizedStatement = sanitizeSqlForPostgres(statement);
               await client.query(normalizedStatement);
@@ -71,7 +73,7 @@ export function runMigrations() {
             await client.query("INSERT INTO __custom_migrations (name) VALUES ($1);", [file]);
           }
 
-          console.log("[migrate] اكتمل تطبيق كل الترحيلات ✔");
+          console.log("[migrate] all migrations applied.");
         } finally {
           client.release();
         }
@@ -92,7 +94,7 @@ if (require.main === module) {
   main()
     .then(() => process.exit(0))
     .catch((err) => {
-      console.error("[migrate] خطأ أثناء الترحيل:", err);
+      console.error("[migrate] error during migration:", err);
       process.exit(1);
     });
 }
