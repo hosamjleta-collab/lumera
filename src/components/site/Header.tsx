@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { getCartCount, getCategories } from "@/lib/data";
+import LogoutButton from "./LogoutButton";
 import SearchBox from "./SearchBox";
 import MobileMenu from "./MobileMenu";
 
@@ -24,17 +25,32 @@ export default async function Header() {
             <SearchBox />
           </div>
 
-          <nav className="flex items-center gap-4 sm:gap-5">
-            <Link
-              href={user ? (user.role === "admin" ? "/admin" : user.role === "supplier" ? "/supplier" : "/account") : "/login"}
-              className="flex flex-col items-center text-charcoal hover:text-gold transition-colors"
-              title="حسابي"
-            >
-              <UserIcon />
-              <span className="hidden sm:block text-[11px] mt-0.5">
-                {user ? "حسابي" : "دخول"}
-              </span>
-            </Link>
+          <nav className="flex items-center gap-2 sm:gap-3 md:gap-4">
+            {user ? (
+              <>
+                <Link
+                  href={user.role === "admin" ? "/admin" : user.role === "supplier" ? "/supplier" : "/account"}
+                  className="flex flex-col items-center text-charcoal hover:text-gold transition-colors min-w-[52px]"
+                  title="حسابي"
+                >
+                  <UserIcon />
+                  <span className="hidden sm:block text-[11px] mt-0.5">{user.name || "حسابي"}</span>
+                </Link>
+                <div className="hidden sm:block">
+                  <LogoutButton />
+                </div>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className="flex flex-col items-center text-charcoal hover:text-gold transition-colors min-w-[52px]"
+                title="دخول"
+              >
+                <UserIcon />
+                <span className="hidden sm:block text-[11px] mt-0.5">دخول</span>
+              </Link>
+            )}
+
             {(!user || user.role === "customer") && (
               <Link
                 href="/cart"

@@ -61,3 +61,7 @@ wrangler.jsonc
 # ملفات التنظيف المؤقتة
 clean-db.js
 src/db/clean-db.js
+
+add-categories.js
+update-categories.js
+clean-db.js
