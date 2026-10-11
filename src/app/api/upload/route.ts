@@ -1,11 +1,11 @@
+import "server-only";
 import { NextRequest, NextResponse } from "next/server";
+import { bucket } from "@/lib/blob";
 import { getCurrentUser } from "@/lib/auth";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 import { generateId } from "@/lib/utils";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
-const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_SIZE = 5 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
@@ -26,13 +26,13 @@ export async function POST(req: NextRequest) {
   const safeFolder = ["products", "payment-proofs"].includes(folder) ? folder : "misc";
   const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
   const filename = `${generateId()}.${ext}`;
-
-  const uploadDir = path.join(process.cwd(), "public", "uploads", safeFolder);
-  await mkdir(uploadDir, { recursive: true });
+  const path = `lumera/${safeFolder}/${filename}`;
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(uploadDir, filename), buffer);
+  const blob = await bucket.put(path, buffer, {
+    contentType: file.type,
+    maxSize: "5mb",
+  });
 
-  const publicPath = `/uploads/${safeFolder}/${filename}`;
-  return NextResponse.json({ success: true, path: publicPath });
+  return NextResponse.json({ success: true, path: blob.url });
 }
