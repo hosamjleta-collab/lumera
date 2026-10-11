@@ -23,6 +23,7 @@
     "@neondatabase/serverless": "^1.1.0",
     "@radix-ui/react-toast": "^1.2.23",
     "@tailwindcss/postcss": "^4",
+    "@upstash/blob": "^0.0.11",
     "bcryptjs": "^3.0.3",
     "dotenv": "^18.0.5",
     "drizzle-kit": "^0.31.10",
