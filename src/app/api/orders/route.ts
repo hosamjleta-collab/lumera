@@ -4,6 +4,7 @@ import { orders, orderItems, payments, addresses, notifications, products as pro
 import { getCurrentUser } from "@/lib/auth";
 import { getCartWithProducts, getUserOrders } from "@/lib/data";
 import { generateId, generateOrderReference } from "@/lib/utils";
+import { sendAdminNotification } from "@/lib/notify";
 import { eq } from "drizzle-orm";
 import { cartItems } from "@/db/schema";
 import { z } from "zod";
@@ -126,6 +127,12 @@ export async function POST(req: NextRequest) {
 
   // إفراغ السلة
   await db.delete(cartItems).where(eq(cartItems.userId, user.id));
+
+  await sendAdminNotification({
+    title: "طلب جديد 🛒",
+    message: `طلب جديد بمبلغ ${subtotal} د.ل من ${user.name || "عميل"}`,
+    clickUrl: `https://effervescent-pavlova-7177a7.netlify.app/admin/orders/${orderId}`,
+  });
 
   return NextResponse.json({ success: true, orderId, reference });
 }
