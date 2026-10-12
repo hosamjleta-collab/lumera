@@ -4,8 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+type LoginMethod = "email" | "phone";
+
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
+  const [loginMethod, setLoginMethod] = useState<LoginMethod>("email");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,13 +23,17 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email: loginMethod === "email" ? identifier : "",
+          phone: loginMethod === "phone" ? identifier : "",
+          password,
+        }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message || "حدث خطأ أثناء تسجيل الدخول");
+        throw new Error(data.error || "بيانات الدخول غير صحيحة");
       }
 
       router.push("/");
@@ -42,12 +49,32 @@ export default function LoginPage() {
     <div className="min-h-[70vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-md border border-gray-100">
         <div>
-          <h2 className="text-center text-3xl font-extrabold text-gray-900">
-            تسجيل الدخول
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            مرحبًا بعودتك إلى لوميرا
-          </p>
+          <h2 className="text-center text-3xl font-extrabold text-gray-900">تسجيل الدخول</h2>
+          <p className="mt-2 text-center text-sm text-gray-600">مرحبًا بعودتك إلى لوميرا</p>
+        </div>
+
+        <div className="mb-2">
+          <p className="text-center text-xs text-gray-500 mb-2">طريقة الدخول</p>
+          <div className="flex bg-[#f5efe5] rounded-full p-1 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setLoginMethod("email")}
+              className={`flex-1 py-2 rounded-full text-sm font-medium transition-colors ${
+                loginMethod === "email" ? "bg-[#d8b36a] text-[#2d2014] shadow-sm" : "text-gray-600"
+              }`}
+            >
+              بالبريد
+            </button>
+            <button
+              type="button"
+              onClick={() => setLoginMethod("phone")}
+              className={`flex-1 py-2 rounded-full text-sm font-medium transition-colors ${
+                loginMethod === "phone" ? "bg-[#d8b36a] text-[#2d2014] shadow-sm" : "text-gray-600"
+              }`}
+            >
+              بالهاتف
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -60,22 +87,20 @@ export default function LoginPage() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                البريد الإلكتروني
+                {loginMethod === "email" ? "البريد الإلكتروني" : "رقم الهاتف"}
               </label>
               <input
-                type="text"
+                type={loginMethod === "email" ? "email" : "tel"}
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-                placeholder="أدخل البريد الإلكتروني"
+                placeholder={loginMethod === "email" ? "أدخل البريد الإلكتروني" : "أدخل رقم الهاتف"}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                كلمة المرور
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">كلمة المرور</label>
               <input
                 type="password"
                 required

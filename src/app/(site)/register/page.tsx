@@ -4,12 +4,15 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
+type AuthMethod = "email" | "phone";
+
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialRole = searchParams.get("role") === "supplier" ? "supplier" : "customer";
 
   const [role, setRole] = useState<"customer" | "supplier">(initialRole);
+  const [authMethod, setAuthMethod] = useState<AuthMethod>("email");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -24,23 +27,37 @@ function RegisterForm() {
     setError("");
     setSuccess("");
     setLoading(true);
+
     try {
+      const payload = {
+        name: name.trim(),
+        email: authMethod === "email" ? email.trim() : "",
+        phone: authMethod === "phone" ? phone.trim() : "",
+        password,
+        role,
+        storeName: role === "supplier" ? storeName.trim() : "",
+        authMethod,
+      };
+
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, phone, password, role, storeName }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
+
       if (!res.ok) {
         setError(data.error || "حدث خطأ");
         setLoading(false);
         return;
       }
-      if (data.pendingApproval) {
-        setSuccess(data.message);
+
+      if (data.pendingApproval || data.needsLogin) {
+        setSuccess(data.message || "تم إنشاء الحساب بنجاح");
         setLoading(false);
         return;
       }
+
       router.push("/account");
       router.refresh();
     } catch {
@@ -52,7 +69,31 @@ function RegisterForm() {
   return (
     <div className="max-w-md mx-auto px-6 py-16">
       <h1 className="text-2xl font-bold text-center mb-1">إنشاء حساب جديد</h1>
-      <p className="text-center text-charcoal/60 text-sm mb-8">انضمي إلى عائلة لوميرا</p>
+      <p className="text-center text-charcoal/60 text-sm mb-6">انضمي إلى عائلة لوميرا</p>
+
+      <div className="mb-6">
+        <p className="text-center text-xs text-charcoal/60 mb-2">طريقة التسجيل</p>
+        <div className="flex bg-[#f5efe5] rounded-full p-1 card-shadow">
+          <button
+            type="button"
+            onClick={() => setAuthMethod("email")}
+            className={`flex-1 py-2 rounded-full text-sm font-medium transition-colors ${
+              authMethod === "email" ? "bg-[#d8b36a] text-[#2d2014] shadow-sm" : "text-charcoal/60"
+            }`}
+          >
+            التسجيل بالبريد
+          </button>
+          <button
+            type="button"
+            onClick={() => setAuthMethod("phone")}
+            className={`flex-1 py-2 rounded-full text-sm font-medium transition-colors ${
+              authMethod === "phone" ? "bg-[#d8b36a] text-[#2d2014] shadow-sm" : "text-charcoal/60"
+            }`}
+          >
+            التسجيل بالهاتف
+          </button>
+        </div>
+      </div>
 
       <div className="flex bg-white rounded-full p-1 mb-6 card-shadow">
         <button
@@ -87,6 +128,7 @@ function RegisterForm() {
           {error && (
             <div className="bg-red-50 text-red-600 text-sm rounded-lg p-3 text-center">{error}</div>
           )}
+
           <div>
             <label className="block text-sm font-medium mb-1">
               {role === "supplier" ? "اسم المسؤول" : "الاسم الكامل"}
@@ -98,6 +140,7 @@ function RegisterForm() {
               className="w-full border border-charcoal/15 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-gold/40"
             />
           </div>
+
           {role === "supplier" && (
             <div>
               <label className="block text-sm font-medium mb-1">اسم المتجر</label>
@@ -109,24 +152,34 @@ function RegisterForm() {
               />
             </div>
           )}
-          <div>
-            <label className="block text-sm font-medium mb-1">البريد الإلكتروني</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-charcoal/15 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-gold/40"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">رقم الهاتف (اختياري)</label>
-            <input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full border border-charcoal/15 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-gold/40"
-            />
-          </div>
+
+          {authMethod === "email" && (
+            <div>
+              <label className="block text-sm font-medium mb-1">البريد الإلكتروني</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full border border-charcoal/15 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-gold/40"
+              />
+            </div>
+          )}
+
+          {authMethod === "phone" && (
+            <div>
+              <label className="block text-sm font-medium mb-1">رقم الهاتف</label>
+              <input
+                type="tel"
+                inputMode="tel"
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full border border-charcoal/15 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-gold/40"
+              />
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium mb-1">كلمة المرور</label>
             <input
@@ -138,11 +191,13 @@ function RegisterForm() {
               className="w-full border border-charcoal/15 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-gold/40"
             />
           </div>
+
           {role === "supplier" && (
             <p className="text-xs text-charcoal/50">
               ملاحظة: سيتم مراجعة حسابك من قبل الإدارة قبل تفعيله.
             </p>
           )}
+
           <button
             type="submit"
             disabled={loading}

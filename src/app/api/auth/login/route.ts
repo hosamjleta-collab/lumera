@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { users } from "@/db/schema";
 import { getUserByEmail } from "@/lib/data";
 import { verifyPassword, setSessionCookie } from "@/lib/auth";
 
 const schema = z.object({
-  email: z.string().email("بريد إلكتروني غير صحيح"),
+  email: z.string().trim().optional(),
+  phone: z.string().trim().optional(),
   password: z.string().min(1, "كلمة المرور مطلوبة"),
 });
 
@@ -18,20 +22,31 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    const { email, password } = parsed.data;
 
-    const user = await getUserByEmail(email);
+    const { email: inputEmail, phone: inputPhone, password } = parsed.data;
+    const email = (inputEmail ?? "").trim();
+    const phone = (inputPhone ?? "").trim();
+
+    if (!email && !phone) {
+      return NextResponse.json({ error: "بيانات الدخول غير صحيحة" }, { status: 401 });
+    }
+
+    let user = null;
+
+    if (email) {
+      user = await getUserByEmail(email);
+    } else {
+      const rows = await db.select().from(users).where(eq(users.phone, phone)).limit(1);
+      user = rows[0] ?? null;
+    }
+
     if (!user) {
-      return NextResponse.json({ error: "البريد الإلكتروني أو كلمة المرور غير صحيحة" }, { status: 401 });
+      return NextResponse.json({ error: "بيانات الدخول غير صحيحة" }, { status: 401 });
     }
 
     const valid = await verifyPassword(password, user.passwordHash);
     if (!valid) {
-      return NextResponse.json({ error: "البريد الإلكتروني أو كلمة المرور غير صحيحة" }, { status: 401 });
-    }
-
-    if (!user.email) {
-      return NextResponse.json({ error: "هذا الحساب لا يملك بريدًا إلكترونيًا مسجلاً." }, { status: 400 });
+      return NextResponse.json({ error: "بيانات الدخول غير صحيحة" }, { status: 401 });
     }
 
     if (user.status === "suspended") {
@@ -47,7 +62,7 @@ export async function POST(req: NextRequest) {
     await setSessionCookie({
       id: user.id,
       name: user.name,
-      email: user.email,
+      email: user.email ?? "",
       role: user.role as "customer" | "supplier" | "admin",
     });
 

@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users, supplierProfiles } from "@/db/schema";
 import { hashPassword, setSessionCookie } from "@/lib/auth";
 import { generateId } from "@/lib/utils";
-import { getUserByEmail } from "@/lib/data";
 
 const schema = z.object({
-  name: z.string().min(2, "الاسم قصير جدًا"),
-  email: z.string().email("بريد إلكتروني غير صحيح"),
-  phone: z.string().optional(),
+  name: z.string().trim().min(2, "الاسم قصير جدًا"),
+  email: z.union([z.string().trim().email("بريد إلكتروني غير صحيح"), z.literal("")]).optional(),
+  phone: z.union([z.string().trim().min(7, "رقم الهاتف غير صحيح"), z.literal("")]).optional(),
   password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
   role: z.enum(["customer", "supplier"]).default("customer"),
-  storeName: z.string().optional(),
+  storeName: z.string().trim().optional(),
+  authMethod: z.enum(["email", "phone"]).default("email"),
 });
 
 export async function POST(req: NextRequest) {
@@ -25,25 +26,51 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    const { name, email, phone, password, role, storeName } = parsed.data;
 
-    const existing = await getUserByEmail(email);
-    if (existing) {
-      return NextResponse.json({ error: "هذا البريد الإلكتروني مسجل بالفعل" }, { status: 409 });
+    const { name, email: rawEmail, phone: rawPhone, password, role, storeName, authMethod } = parsed.data;
+    const email = typeof rawEmail === "string" ? rawEmail.trim() : "";
+    const phone = typeof rawPhone === "string" ? rawPhone.trim() : "";
+
+    if (authMethod === "email" && !email) {
+      return NextResponse.json({ error: "البريد الإلكتروني مطلوب عند التسجيل بالبريد" }, { status: 400 });
     }
 
-    if (role === "supplier" && !storeName) {
+    if (authMethod === "phone" && !phone) {
+      return NextResponse.json({ error: "رقم الهاتف مطلوب عند التسجيل بالهاتف" }, { status: 400 });
+    }
+
+    if (!email && !phone) {
+      return NextResponse.json({ error: "يجب إدخال بريد إلكتروني أو رقم هاتف واحد على الأقل" }, { status: 400 });
+    }
+
+    if (role === "supplier" && !storeName?.trim()) {
       return NextResponse.json({ error: "اسم المتجر مطلوب للموردين" }, { status: 400 });
+    }
+
+    if (email) {
+      const existingEmail = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      if (existingEmail[0]) {
+        return NextResponse.json({ error: "هذا البريد الإلكتروني مسجل بالفعل" }, { status: 409 });
+      }
+    }
+
+    if (phone) {
+      const existingPhone = await db.select().from(users).where(eq(users.phone, phone)).limit(1);
+      if (existingPhone[0]) {
+        return NextResponse.json({ error: "هذا الرقم مسجل بالفعل" }, { status: 409 });
+      }
     }
 
     const passwordHash = await hashPassword(password);
     const userId = generateId("usr");
+    const normalizedEmail = authMethod === "email" ? email : null;
+    const normalizedPhone = authMethod === "phone" ? phone : phone || null;
 
     await db.insert(users).values({
       id: userId,
       name,
-      email,
-      phone: phone || null,
+      email: normalizedEmail,
+      phone: normalizedPhone,
       passwordHash,
       role,
       status: role === "supplier" ? "pending" : "active",
@@ -53,10 +80,10 @@ export async function POST(req: NextRequest) {
       await db.insert(supplierProfiles).values({
         id: generateId("sup"),
         userId,
-        storeName: storeName!,
+        storeName: storeName!.trim(),
         approved: false,
       });
-      // الموردون بانتظار موافقة الإدارة - لا نُنشئ جلسة تلقائية كاملة الصلاحية
+
       return NextResponse.json({
         success: true,
         pendingApproval: true,
@@ -64,9 +91,16 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    await setSessionCookie({ id: userId, name, email, role });
+    if (email) {
+      await setSessionCookie({ id: userId, name, email, role });
+      return NextResponse.json({ success: true });
+    }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      needsLogin: true,
+      message: "تم إنشاء الحساب بنجاح. يمكنك تسجيل الدخول باستخدام رقم الهاتف.",
+    });
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: "حدث خطأ غير متوقع" }, { status: 500 });
