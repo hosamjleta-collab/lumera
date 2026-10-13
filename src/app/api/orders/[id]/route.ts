@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getOrderWithItems } from "@/lib/data";
 import { db } from "@/db";
-import { paymentProofs, addresses } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { paymentProofs, addresses, supplierProfiles } from "@/db/schema";
+import { eq, inArray } from "drizzle-orm";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -31,9 +31,27 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   // إن كان مورد، أظهر فقط عناصره
   const visibleItems = isSupplierOfItem && !isAdmin && !isOwner ? items.filter((i) => i.supplierId === user.id) : items;
 
+  const uniqueSupplierIds = [...new Set(visibleItems.map((item) => item.supplierId))];
+  const supplierRows =
+    uniqueSupplierIds.length > 0
+      ? await db
+          .select()
+          .from(supplierProfiles)
+          .where(inArray(supplierProfiles.userId, uniqueSupplierIds))
+      : [];
+
+  const supplierNameMap = Object.fromEntries(
+    supplierRows.map((supplier) => [supplier.userId, supplier.storeName]),
+  );
+
+  const itemsWithSupplierNames = visibleItems.map((item) => ({
+    ...item,
+    supplierStoreName: supplierNameMap[item.supplierId] || "متجر غير معروف",
+  }));
+
   return NextResponse.json({
     order,
-    items: visibleItems,
+    items: itemsWithSupplierNames,
     proofs,
     address: addressRows[0] || null,
   });

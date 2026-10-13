@@ -12,6 +12,7 @@ type OrderItem = {
   sellingPrice: number;
   lineTotal: number;
   supplierId: string;
+  supplierStoreName?: string;
 };
 type Order = {
   id: string;
@@ -30,6 +31,12 @@ type Address = {
   city: string;
   area: string | null;
   addressLine: string;
+};
+type SupplierGroup = {
+  supplierId: string;
+  storeName: string;
+  items: OrderItem[];
+  subtotal: number;
 };
 
 const allStatuses = [
@@ -55,6 +62,27 @@ export default function AdminOrderDetailPage() {
   const [rejectReason, setRejectReason] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  const supplierGroups = items.reduce<SupplierGroup[]>((groups, item) => {
+    const supplierId = item.supplierId;
+    const storeName = item.supplierStoreName || "متجر غير معروف";
+    const existing = groups.find((group) => group.supplierId === supplierId);
+
+    if (existing) {
+      existing.items.push(item);
+      existing.subtotal += Number(item.lineTotal || 0);
+      return groups;
+    }
+
+    groups.push({
+      supplierId,
+      storeName,
+      items: [item],
+      subtotal: Number(item.lineTotal || 0),
+    });
+
+    return groups;
+  }, []);
 
   async function load() {
     const res = await fetch(`/api/orders/${orderId}`);
@@ -123,17 +151,35 @@ export default function AdminOrderDetailPage() {
 
       <div className="bg-white rounded-2xl card-shadow p-6 mb-6">
         <h3 className="font-semibold mb-4">المنتجات</h3>
-        <ul className="text-sm space-y-2">
-          {items.map((i) => (
-            <li key={i.id} className="flex justify-between">
-              <span className="text-charcoal/70">
-                {i.productName} × {i.quantity}
-              </span>
-              <span>{formatPrice(i.lineTotal)}</span>
-            </li>
+
+        <div className="space-y-4">
+          {supplierGroups.map((group) => (
+            <div key={group.supplierId} className="bg-white rounded-xl border border-charcoal/10 overflow-hidden">
+              <div className="bg-charcoal/5 px-4 py-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span aria-label="المتجر">🏪</span>
+                  <span className="font-semibold">{group.storeName}</span>
+                </div>
+                <div className="text-sm text-charcoal/60">
+                  {group.items.length} منتج • {formatPrice(group.subtotal)}
+                </div>
+              </div>
+
+              <div className="divide-y divide-charcoal/5">
+                {group.items.map((item) => (
+                  <div key={item.id} className="flex justify-between items-center px-4 py-3 text-sm">
+                    <span className="text-charcoal/70">
+                      {item.productName} × {item.quantity}
+                    </span>
+                    <span>{formatPrice(item.lineTotal)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           ))}
-        </ul>
-        <div className="flex justify-between font-bold text-lg border-t border-charcoal/10 pt-3 mt-3">
+        </div>
+
+        <div className="flex justify-between font-bold text-lg border-t border-charcoal/10 pt-3 mt-4">
           <span>الإجمالي</span>
           <span>{formatPrice(order.total)}</span>
         </div>
