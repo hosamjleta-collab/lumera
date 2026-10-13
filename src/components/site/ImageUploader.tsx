@@ -1,6 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import imageCompression from "browser-image-compression";
+
+const ACCEPTED_TYPES = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+];
 
 export default function ImageUploader({
   images,
@@ -14,22 +24,53 @@ export default function ImageUploader({
 
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
+
     setUploading(true);
     setError("");
     const newPaths: string[] = [];
+
     for (const file of Array.from(files)) {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("folder", "products");
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "فشل رفع إحدى الصور");
-        continue;
+      try {
+        const isAcceptedType =
+          ACCEPTED_TYPES.includes(file.type) ||
+          [".heic", ".heif", ".jpg", ".jpeg", ".png", ".webp"].some((ext) =>
+            file.name.toLowerCase().endsWith(ext),
+          );
+
+        if (!isAcceptedType) {
+          setError("نوع الملف غير مدعوم. استخدم JPG، PNG، WEBP، أو HEIC/HEIF");
+          continue;
+        }
+
+        const compressedFile = await imageCompression(file, {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1200,
+          useWebWorker: true,
+          fileType: "image/jpeg",
+        });
+
+        const formData = new FormData();
+        formData.append("file", compressedFile, compressedFile.name || "product.jpg");
+        formData.append("folder", "products");
+
+        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        const data = await res.json();
+
+        if (!res.ok) {
+          setError(data.error || "فشل رفع إحدى الصور");
+          continue;
+        }
+
+        newPaths.push(data.path);
+      } catch {
+        setError("تعذّر ضغط الصورة أو رفعها. حاول صورة أخرى.");
       }
-      newPaths.push(data.path);
     }
-    onChange([...images, ...newPaths]);
+
+    if (newPaths.length > 0) {
+      onChange([...images, ...newPaths]);
+    }
+
     setUploading(false);
   }
 
@@ -55,12 +96,12 @@ export default function ImageUploader({
       </div>
       <input
         type="file"
-        accept="image/png,image/jpeg,image/webp"
+        accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif"
         multiple
         onChange={(e) => handleFiles(e.target.files)}
         className="text-sm"
       />
-      {uploading && <p className="text-xs text-charcoal/50 mt-1">جارٍ رفع الصور...</p>}
+      {uploading && <p className="text-xs text-charcoal/50 mt-1">جارٍ ضغط الصورة...</p>}
       {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
     </div>
   );

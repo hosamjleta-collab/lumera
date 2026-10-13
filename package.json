@@ -25,6 +25,7 @@
     "@tailwindcss/postcss": "^4",
     "@upstash/blob": "^0.0.11",
     "bcryptjs": "^3.0.3",
+    "browser-image-compression": "^2.0.2",
     "dotenv": "^18.0.5",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
